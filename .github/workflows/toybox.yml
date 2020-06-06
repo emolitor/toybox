@@ -42,7 +42,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Setup
-      run: sudo apk add build-base
+      run: apk add build-base
     - name: Configure
       run: make defconfig
     - name: Build
