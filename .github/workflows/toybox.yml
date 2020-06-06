@@ -16,7 +16,7 @@ jobs:
     - name: Setup
       run: brew install gnu-sed
     - name: Configure
-      run: make defconfig
+      run: make macos_defconfig
     - name: Build
       run: make
     - name: Test
