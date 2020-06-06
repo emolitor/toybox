@@ -7,7 +7,7 @@ on:
     branches: [ master ]
 
 jobs:
-  MacOS-10.15:
+  MacOS-10_15:
     runs-on: macos-10.15
 
     steps:
@@ -21,7 +21,7 @@ jobs:
     - name: Test
       run: make tests
 
-  Ubuntu-20.04:
+  Ubuntu-20_04:
     runs-on: ubuntu-20.04
 
     steps:
@@ -35,7 +35,7 @@ jobs:
     - name: Test
       run: make tests
 
-  Alpine-3.12:
+  Alpine-3_12:
     runs-on: ubuntu-20.04
     container: alpine:3.12
 
