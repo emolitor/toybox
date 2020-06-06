@@ -7,9 +7,8 @@ on:
     branches: [ master ]
 
 jobs:
-  build:
-
-    runs-on: macos-latest
+  MacOS-10.15:
+    runs-on: macos-10.15
 
     steps:
     - uses: actions/checkout@v2
@@ -17,6 +16,35 @@ jobs:
       run: brew install gnu-sed
     - name: Configure
       run: make macos_defconfig
+    - name: Build
+      run: make
+    - name: Test
+      run: make tests
+
+  Ubuntu-20.04:
+    runs-on: ubuntu-20.04
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup
+      run: sudo apt-get install build-essential
+    - name: Configure
+      run: make defconfig
+    - name: Build
+      run: make
+    - name: Test
+      run: make tests
+
+  Alpine-3.12:
+    runs-on: ubuntu-20.04
+    container: alpine:3.12
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup
+      run: sudo apk add build-base
+    - name: Configure
+      run: make defconfig
     - name: Build
       run: make
     - name: Test
