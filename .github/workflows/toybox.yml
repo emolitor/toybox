@@ -27,7 +27,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Setup
-      run: sudo apt-get install build-essential
+      run: apt-get install build-essential
     - name: Configure
       run: make defconfig
     - name: Build
@@ -42,7 +42,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Setup
-      run: apk add build-base
+      run: apk add build-base bash
     - name: Configure
       run: make defconfig
     - name: Build
