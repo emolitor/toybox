@@ -14,7 +14,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Setup
-      run: sudo brew install gnu-sed
+      run: brew install gnu-sed
     - name: Configure
       run: make defconfig
     - name: Build
