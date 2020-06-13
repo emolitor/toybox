@@ -37,6 +37,20 @@ jobs:
     - name: Test
       run: make tests
 
+  Ubuntu-20_04-Clang-ASAN:
+    runs-on: ubuntu-20.04
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup
+      run: sudo apt-get install build-essential clang
+    - name: Configure
+      run: make defconfig
+    - name: Build
+      run: CC=clang ASAN=1 make
+    - name: Test
+      run: make tests
+
   Alpine-3_12:
     runs-on: ubuntu-20.04
     container: alpine:3.12
