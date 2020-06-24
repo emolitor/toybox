@@ -19,7 +19,7 @@ jobs:
     - name: Build
       run: make
     - name: Test
-      run: make tests
+      run: VERBOSE=1 make tests
 
   Ubuntu-20_04:
     runs-on: ubuntu-20.04
@@ -33,7 +33,7 @@ jobs:
     - name: Build
       run: make
     - name: Test
-      run: make tests
+      run: VERBOSE=1 make tests
 
   Ubuntu-20_04-Clang-ASAN:
     runs-on: ubuntu-20.04
@@ -43,23 +43,8 @@ jobs:
     - name: Setup
       run: sudo apt-get install build-essential clang
     - name: Configure
-      run: make defconfig
+      run: CC=clang make defconfig
     - name: Build
       run: CC=clang ASAN=1 make
     - name: Test
-      run: make tests
-
-  Alpine-3_12:
-    runs-on: ubuntu-20.04
-    container: alpine:3.12
-
-    steps:
-    - uses: actions/checkout@v2
-    - name: Setup
-      run: apk add build-base linux-headers diffutils findutils bash
-    - name: Configure
-      run: make defconfig
-    - name: Build
-      run: make
-    - name: Test
-      run: make tests
+      run: VERBOSE=1 make tests
