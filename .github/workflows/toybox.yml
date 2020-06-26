@@ -35,11 +35,29 @@ jobs:
     - name: Test
       run: VERBOSE=1 make tests
 
+  Ubuntu-20_04-Clang:
+    runs-on: ubuntu-20.04
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup
+      run: sudo apt-get install build-essential clang
+    - name: Configure
+      run: CC=clang make defconfig
+    - name: Build
+      run: CC=clang make
+    - name: Test
+      run: VERBOSE=1 make tests
+
   Ubuntu-20_04-Clang-ASAN:
     runs-on: ubuntu-20.04
 
     steps:
     - uses: actions/checkout@v2
+    - name: Update
+      run: sudo apt-get update
+    - name: Upgrade
+      run: sudo apt-get upgrade
     - name: Setup
       run: sudo apt-get install build-essential clang
     - name: Configure
