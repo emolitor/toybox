@@ -1,4 +1,4 @@
-name: toybox CI
+name: Toybox CI
 
 on:
   schedule:
