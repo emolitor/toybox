@@ -1,5 +1,35 @@
 #!/bin/echo no
 
+# TODO https://mywiki.wooledge.org/BashFAQ
+#   http://tiswww.case.edu/php/chet/bash/FAQ
+#   https://mywiki.wooledge.org/BashPitfalls#set_-euo_pipefail
+
+#        // ${#} ${#x} ${#@} ${#x[@]} ${#!} ${!#}
+#        // ${!} ${!@} ${!@Q} ${!x} ${!x@} ${!x@Q} ${!x#} ${!x[} ${!x[*]}
+
+# Looked like a prefix but wasn't: three chars (@ # -) are both paremeter name
+# and slice operator. When immediately followed by } it's parameter, otherwise
+# we did NOT have a prefix and it's an operator.
+#
+# ${#-} ${#-abc}
+# ${##} ${##0}
+# ${#@} ${#@Q}
+#
+# backslash not discarded: echo "abc\"def"
+
+# ${x:-y} use default
+# ${x:=y} assign default (error if positional)
+# ${x:?y} err if null
+# ${x:+y} alt value
+# ${x:off} ${x:off:len} off<0 from end (must ": -"), len<0 also from end must
+#   0-based indexing
+# ${@:off:len} positional parameters, off -1 = len, -len is error
+#   1-based indexing
+
+# [] wins over +()
+# touch 'AB[DEF]'; echo AB[+(DEF]) AB[+(DEF)?
+# AB[+(DEF]) AB[DEF]
+
 # Testing shell corner cases _within_ a shell script is kind of hard.
 
 [ -f testing.sh ] && . testing.sh
@@ -36,6 +66,9 @@ testing '-c args2' "\$SH -c 'echo \${10}' a b c d e f g h i j k l" "k\n" "" ""
 testing '-c arg split' \
   "$SH -c 'for i in a\"\$@\"b;do echo =\$i=;done;echo \$0' 123 456 789" \
   "=a456=\n=789b=\n123\n" "" ""
+testing '-c arg split2' \
+  "$SH -c 'for i in a\"\$* \$@\"b; do echo =\$i=;done' one two three four five"\
+  "=atwo three four five two=\n=three=\n=four=\n=fiveb=\n" "" ""
 testing '-c arg count' "$SH -c 'echo \$#' 9 8 7 6 1 2 3 4" "7\n" "" ""
 testing "exec3" '$C -c "{ exec readlink /proc/self/fd/0;} < /proc/self/exe"' \
   "$(readlink -f $C)\n" "" ""
@@ -134,14 +167,38 @@ testing "brackets9" 'echo A{B{C,D}E{N,O},F{G,H}I}J{K,L}M' \
 for i in /root /var/root /; do [ -e $i ] && EXPECT=$i && break; done
 testing "bracket+tilde" "echo {~,~root}/pwd" "$HOME/pwd $EXPECT/pwd\n" "" ""
 
+# Slices
+
+testing '${x#prefix}' 'x=abcde; echo ${x#abc}' 'de\n' '' ''
+testing '${x#short} ${x##long}' 'x=banana; echo ${x#b*n} ${x##b*n}' \
+  'ana a\n' '' ''
+toyonly testing '${x#utf8}' 'x=aそcde; echo ${x##a?c}' 'de\n' '' ''
+testing '${x%y}' 'x=potato; echo ${x%t*o} ${x%%t*o}' 'pota po\n' '' ''
+testing '${x^y}' 'x=aaaaa; echo ${x^a}' 'Aaaaa\n' '' ''
+testing '${x^^y}' 'x=abccdec; echo ${x^^c}; x=abcdec; echo ${x^^c}' \
+  'abCCdeC\nabCdeC\n' '' ''
+testing '${x,y}' 'x=BBB; echo ${x,B}' 'bBB\n' '' ''
+testing '${x,,y}' 'x=POTATO; echo ${x,,} ${x,,?} ${x,,*} ${x,,T}' \
+  'potato potato potato POtAtO\n' '' ''
+
+mkdir -p abc/def/ghi
+touch www
+testing 'wildcards' 'echo w[v-x]w w[x-v]w abc/*/ghi' \
+  'www w[x-v]w abc/def/ghi\n' '' ''
+
 #testing "backtick1" 'X=fred; echo `echo $x`' 'fred\n' "" ""
 #testing "backtick2" 'X=fred; echo `x=y; echo $x`' 'y\n' "" ""
 testing '$(( ) )' 'echo ab$((echo hello) | tr e x)cd' "abhxllocd\n" "" ""
+testing '$((x=y)) lifetime' 'a=boing; echo $a $a$((a=4))$a $a' 'boing boing44 4\n' '' ''
 
 # Loops and flow control
 testing "case" 'for i in A C J B; do case "$i" in A) echo got A ;; B) echo and B ;; C) echo then C ;; *) echo default ;; esac; done' \
   "got A\nthen C\ndefault\nand B\n" "" ""
-
+testing "case newlines" \
+  $'case i\n\nin\n\na) echo one\n\n;;\n\ni)\n\necho two\n\n;;\n\nesac' \
+  "two\n" "" ""
+testing 'loop in && ||' \
+  'false && for i in a b c; do echo $i; done || echo no' 'no\n' '' ''
 testing "continue" 'for i in a b c; do for j in d e f; do echo $i $j; continue 2; done; done' \
   "a d\nb d\nc d\n" "" ""
 
@@ -159,6 +216,8 @@ testing "leading variable assignment" 'abc=def env | grep ^abc=; echo $abc' \
 testing "leading variable assignments" \
   "abc=def ghi=jkl env | egrep '^(abc|ghi)=' | sort; echo \$abc \$ghi" \
   "abc=def\nghi=jkl\n\n" "" ""
+testing "leading assignment occurs after parsing" \
+  'abc=def; abc=ghi echo $abc' "def\n" "" ""
 testing "leading assignment space" 'X="abc  def"; Y=$X; echo "$Y"' \
   "abc  def\n" "" ""
 testing "leading assignment space2" \
@@ -253,11 +312,11 @@ testing "subshell splitting" 'for i in $(true); do echo =$i=; done' "" "" ""
 #testing "subshell split 2"
 
 # variable assignment argument splitting only performed for "$@"
-testing "assignment splitting" 'X="one two"; Y=$X; echo $Y' "one two\n" "" ""
+testing "assignment nosplit" 'X="one two"; Y=$X; echo $Y' "one two\n" "" ""
 testing "argument splitting" \
   'chicken() { for i in a"$@"b;do echo =$i=;done;}; chicken 123 456 789' \
   "=a123=\n=456=\n=789b=\n" "" ""
-testing "assignment splitting2" 'pop(){ X="$@";};pop one two three; echo $X' \
+testing "assignment nosplit2" 'pop(){ X="$@";};pop one two three; echo $X' \
   "one two three\n" "" ""
 
 #testing "leading assignments don't affect current line" \
@@ -396,6 +455,8 @@ testing 'IFS wildcards' \
   'abc\ndef\nwallpapers\nwalrus\n' '' ''
 rm -f walrus wallpapers
 
+# Force parsing granularity via interactive shxpect because bash parses all
+# of sh -c "str" in one go, meaning the "shopt -s extglob" won't take effect
 shxpect 'IFS +(extglob)' I$'shopt -s extglob\n' E"$P" \
   I$'IFS=x; ABC=cxd; for i in +($ABC); do echo =$i=; done\n' \
   O$'=+(c=\n' O$'=d)=\n'
@@ -404,6 +465,20 @@ touch abc\)d
 shxpect 'IFS +(extglob) 2' I$'shopt -s extglob\n' E"$P" \
   I$'ABC="c?d"; for i in ab+($ABC); do echo =$i=; done\n' \
   O$'=abc)d=\n'
+rm abc\)d
+
+shxpect '[+(]) overlap priority' I$'shopt -s extglob\n' E"$P" \
+  I$'touch "AB[DEF]"; echo AB[+(DEF]) AB[+(DEF)? AB+([DEF)]\n' \
+  O$'AB[+(DEF]) AB[DEF] AB+([DEF)]\n' \
+  I$'X="("; Y=")"; echo AB[+${X}DEF${Y}?\n' O$'AB[DEF]\n'
+
+# TODO: syntax error takes out ': ${a?b}; echo $?' (I.E. never runs echo)
+shxpect '${a?b} sets err, stops cmdline eval' \
+  I$': ${a?b} ${c:=d}\n' E E"$P" I$'echo $?$c\n' O$'1\n'
+
+testing 'source file' 'source input' 'hello\n' 'echo hello \\\n' ''
+testing '. file' '. input' 'hello\n' 'echo hello \\\n' ''
+testing 'source no newline' 'source input' 'hello \\\n' 'echo hello \\' ''
 
 # TODO finish variable list from shell init
 
@@ -438,3 +513,5 @@ shxpect 'IFS +(extglob) 2' I$'shopt -s extglob\n' E"$P" \
 #HISTCMD - history number
 #
 #TMOUT - used by read
+
+# does not match: ./sh -c 'echo {a..Z}' becomes a ` _ ^ ] \ [ Z
